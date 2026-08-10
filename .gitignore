@@ -1,0 +1,20 @@
+# Node / npm
+node_modules/
+npm-debug.log*
+
+# Angular build output & cache
+angular-app/dist/
+angular-app/.angular/
+angular-app/out-tsc/
+
+# Claude Code local (machine-specific) settings
+.claude/settings.local.json
+
+# Editors / OS
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db

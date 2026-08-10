@@ -1,0 +1,190 @@
+<div id="space"></div>
+<div id="stage">
+  <svg id="map" #mapSvg></svg>
+  <canvas id="flow" #flowCanvas></canvas>
+  <div id="labels" #labelsEl></div>
+  <div id="vignette"></div>
+  <svg id="grain"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2"/></filter><rect width="100%" height="100%" filter="url(#n)"/></svg>
+</div>
+
+<div id="progressbar" #progressBar></div>
+<div id="hud">
+  <div>Proyecto doctoral · Conectividad marina</div>
+  <div>Carta № 04 · Golfo de México</div>
+</div>
+<div id="coords" #coordsEl>23°08′ N · 82°21′ O</div>
+<svg id="compass" #compassEl width="86" height="86" viewBox="0 0 86 86">
+  <circle cx="43" cy="43" r="40" fill="none" stroke="#A8BCC7" stroke-width="1" opacity=".5"/>
+  <circle cx="43" cy="43" r="31" fill="none" stroke="#A8BCC7" stroke-width=".6" opacity=".35"/>
+  <g #needleEl style="transform-origin:43px 43px;transition:transform .15s ease-out">
+    <polygon points="43,8 47,43 43,50 39,43" fill="#E4A84D"/>
+    <polygon points="43,78 47,43 43,36 39,43" fill="#A8BCC7" opacity=".6"/>
+  </g>
+  <text x="43" y="6" text-anchor="middle" fill="#E4A84D" font-size="9" font-family="IBM Plex Mono, monospace">N</text>
+  <text x="43" y="85" text-anchor="middle" fill="#A8BCC7" font-size="8" font-family="IBM Plex Mono, monospace" opacity=".7">S</text>
+  <text x="81" y="46" text-anchor="middle" fill="#A8BCC7" font-size="8" font-family="IBM Plex Mono, monospace" opacity=".7">E</text>
+  <text x="5" y="46" text-anchor="middle" fill="#A8BCC7" font-size="8" font-family="IBM Plex Mono, monospace" opacity=".7">O</text>
+</svg>
+
+<div id="loading" #loadingEl>Trazando la carta náutica…</div>
+<div id="title">
+  <div class="eyebrow">Expedición · Cuba → Florida → México</div>
+  <h1>La ruta de la <em>corriente</em></h1>
+  <div class="sub">Cómo los peces de los arrecifes cubanos viajan a la deriva por la Corriente de Florida
+    hasta las costas del sur de la Florida, y por el giro del Golfo hasta el litoral mexicano.
+    Un estudio doctoral sobre conectividad marina.</div>
+  <div class="hint">Desplázate para comenzar el viaje ↓</div>
+</div>
+
+<div class="card left" id="ch1">
+  <div class="kicker">Capítulo I · El desove</div>
+  <h2>Todo comienza en Cuba</h2>
+  <p>En los arrecifes del noroeste cubano, durante las lunas llenas de verano, pargos y meros se congregan
+     por miles en agregaciones de desove: un ritual sincronizado con la luna y la marea. Millones de larvas
+     quedan suspendidas en el agua, a merced de la corriente que pasa frente a la isla.</p>
+  <div class="chips">
+    <div class="chip"><b>12</b><span>especies estudiadas</span></div>
+    <div class="chip"><b>3</b><span>sitios de desove</span></div>
+  </div>
+</div>
+
+<div class="card right" id="ch2">
+  <div class="kicker">Capítulo II · La corriente</div>
+  <h2>Un río dentro del mar</h2>
+  <p>La Corriente de Florida transporta más agua que todos los ríos del planeta juntos. Las larvas
+     entran en este flujo cálido y veloz que cruza el estrecho entre Cuba y los Cayos de Florida.</p>
+  <div class="chips">
+    <div class="chip"><b>2 m/s</b><span>velocidad máxima</span></div>
+    <div class="chip"><b>26–29 °C</b><span>temperatura del agua</span></div>
+  </div>
+</div>
+
+<div class="card left" id="ch3">
+  <div class="kicker">Capítulo III · La travesía</div>
+  <h2>A la deriva, 500 km</h2>
+  <p>Durante dos a cuatro semanas las larvas viajan sin nadar apenas: la corriente hace el trabajo.
+     Los modelos de deriva del estudio siguen su trayectoria desde La Habana, a través del estrecho,
+     hasta los arrecifes del sur de la Florida.</p>
+  <div class="chips">
+    <div class="chip"><b>~500 km</b><span>distancia recorrida</span></div>
+    <div class="chip"><b>14–28</b><span>días de deriva larval</span></div>
+  </div>
+</div>
+
+<div class="card right" id="chm">
+  <div class="kicker">Capítulo IV · La criba</div>
+  <h2>Uno entre diez mil</h2>
+  <p>La corriente es autopista y lotería a la vez. Depredadores, hambre y remolinos que expulsan a las
+     larvas fuera de la plataforma diezman cada cohorte: de cada desove masivo, solo una fracción ínfima
+     vive lo suficiente para asentarse en un arrecife.</p>
+  <div class="chips">
+    <div class="chip"><b>&lt;0,01 %</b><span>supervivencia estimada</span></div>
+    <div class="chip"><b>21</b><span>días de edad media al asentarse</span></div>
+  </div>
+</div>
+
+<div class="card left" id="ch4">
+  <div class="kicker">Capítulo V · La llegada</div>
+  <h2>Costas de la Florida</h2>
+  <p>Las larvas que sobreviven se asientan en los arrecifes de los Cayos y del sureste de la Florida.
+     El análisis genético del doctorado confirma que estas poblaciones descienden, en parte, de los desoves cubanos:
+     dos orillas, un mismo mar.</p>
+  <div class="chips">
+    <div class="chip"><b>68 %</b><span>afinidad genética CU–EE.UU.</span></div>
+    <div class="chip"><b>5</b><span>zonas de asentamiento</span></div>
+  </div>
+  <div class="note">Prototipo visual · datos ilustrativos</div>
+</div>
+
+<div class="card right" id="chr">
+  <div class="kicker">Capítulo VI · El retorno</div>
+  <h2>Un viaje de ida y vuelta</h2>
+  <p>La conectividad no es una calle de sentido único. Remolinos ciclónicos y contracorrientes del estrecho
+     devuelven parte de las larvas hacia el suroeste: los desoves de la Florida también siembran, a su vez,
+     los arrecifes cubanos. Dos orillas que se repueblan mutuamente.</p>
+  <div class="chips">
+    <div class="chip"><b>2</b><span>direcciones de deriva</span></div>
+    <div class="chip"><b>~15 %</b><span>trayectorias de retorno</span></div>
+  </div>
+</div>
+
+<div class="card left" id="chl">
+  <div class="kicker">Capítulo VII · La Corriente de Lazo</div>
+  <h2>Tormentas bajo el mar</h2>
+  <p>El agua que entra por el Canal de Yucatán se pliega dentro del golfo formando un lazo. De él se
+     desprenden remolinos anticiclónicos gigantes —hasta 300 km de diámetro y 800 m de profundidad—
+     que derivan hacia el oeste durante meses, llevando agua cálida y larvas consigo.</p>
+  <div class="chips">
+    <div class="chip"><b>300 km</b><span>diámetro máximo</span></div>
+    <div class="chip"><b>6–11</b><span>meses entre desprendimientos</span></div>
+  </div>
+</div>
+
+<div class="card right" id="ch5">
+  <div class="kicker">Capítulo VIII · La ruta mexicana</div>
+  <h2>La otra ruta: México</h2>
+  <p>No toda el agua cruza al Atlántico. Parte del flujo que entra por el Canal de Yucatán gira al oeste
+     con la Corriente de Lazo y recorre el litoral mexicano, de Tamaulipas a la Bahía de Campeche,
+     sembrando larvas en los arrecifes del camino.</p>
+  <div class="chips">
+    <div class="chip"><b>~1 400 km</b><span>ruta occidental</span></div>
+    <div class="chip"><b>3</b><span>países, un mismo mar</span></div>
+  </div>
+</div>
+
+<div class="card left" id="chp">
+  <div class="kicker">Capítulo IX · El refugio</div>
+  <h2>Jardines de la Reina</h2>
+  <p>Al sur de Cuba, un laberinto de más de 600 cayos guarda el arrecife mejor conservado del Caribe,
+     protegido desde 1996. Sus poblaciones intactas de pargos, meros y tiburones exportan larvas a los
+     arrecifes vecinos: un área protegida siembra el mar mucho más allá de sus límites.</p>
+  <div class="chips">
+    <div class="chip"><b>600+</b><span>cayos e islotes</span></div>
+    <div class="chip"><b>1996</b><span>año de protección</span></div>
+  </div>
+</div>
+
+<div class="card right" id="chc">
+  <div class="kicker">Capítulo X · Un equilibrio frágil</div>
+  <h2>Si la corriente se frena</h2>
+  <p>El sistema oceánico que impulsa estas corrientes —el AMOC— podría debilitarse un 20–25 % hacia 2100.
+     Rutas más lentas significan derivas más largas, más mortalidad larval y menos intercambio entre
+     arrecifes: la red que une a tres países depende de un motor que se está desacelerando.</p>
+  <div class="chips">
+    <div class="chip"><b>−20–25 %</b><span>proyección AMOC · 2100</span></div>
+    <div class="chip"><b>3</b><span>países afectados</span></div>
+  </div>
+</div>
+
+<div class="card left" id="chmet">
+  <div class="kicker">Capítulo XI · El método</div>
+  <h2>Cómo se sigue a una larva</h2>
+  <p>Nadie puede marcar a una larva de 5 mm. El estudio combina tres líneas de evidencia: modelos de
+     deriva lagrangianos alimentados por corrientes simuladas de alta resolución, muestreo de larvas en
+     el mar y genética de poblaciones que rastrea el parentesco entre orillas.</p>
+  <div class="chips">
+    <div class="chip"><b>1/25°</b><span>resolución del modelo</span></div>
+    <div class="chip"><b>3</b><span>líneas de evidencia</span></div>
+  </div>
+</div>
+
+<div class="card center" id="ch6">
+  <div class="kicker">La investigación · Quién está detrás</div>
+  <div class="who">
+    <photo-slot id="retrato" shape="circle" style="width:104px;height:104px" placeholder="Foto"></photo-slot>
+    <div>
+      <div class="name">[ Nombre de la doctoranda ]</div>
+      <h2>Detrás del estudio</h2>
+      <p>Doctoranda en biología marina, formada en La Habana. Su trabajo —pionero en combinar modelos
+         de deriva oceánica, muestreo larval y genética de poblaciones— aporta la evidencia más sólida
+         hasta la fecha de que los arrecifes de Cuba, la Florida y México funcionan como una sola red
+         unida por las corrientes. Sus resultados ya informan estrategias de conservación a ambos
+         lados del estrecho.</p>
+    </div>
+  </div>
+  <div class="chips">
+    <div class="chip"><b>4</b><span>años de campañas</span></div>
+    <div class="chip"><b>2 140</b><span>larvas analizadas</span></div>
+  </div>
+  <div class="note">Prototipo visual · datos ilustrativos · arrastra una foto al círculo</div>
+</div>

@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La Ruta de la Corriente — Prototipo scrollytelling</title>
+<script src="https://unpkg.com/d3@7.9.0/dist/d3.min.js" integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/topojson-client@3.1.0/dist/topojson-client.min.js" integrity="sha384-Ukv1p/xTma6P4/2bY5KzWBw+ydSpXmhCMtyciIQVDJ1RmOxtCYNMF1uXT9T63H67" crossorigin="anonymous"></script>
+<script src="./image-slot.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --sea:#0B2334; --sea-deep:#071826; --land:#EDE3CC; --land-line:#B99C6B;
+    --ink:#F2E9D8; --ink-dim:#B9C6CE; --gold:#E4A84D; --coral:#E2725B; --teal:#5FC2C0;
+    --paper:#F4ECDB; --paper-ink:#22303A;
+  }
+  *{margin:0;box-sizing:border-box}
+  html{scroll-behavior:auto}
+  body{background:radial-gradient(120% 90% at 50% 40%, #10344C 0%, var(--sea) 45%, var(--sea-deep) 100%);
+       color:var(--ink); font-family:'Source Serif 4', Georgia, serif; overflow-x:hidden}
+  a{color:var(--gold);text-decoration:none} a:hover{color:var(--coral)}
+  #space{height:2400vh}
+  #stage{position:fixed;inset:0;overflow:hidden}
+  #map,#flow,#labels{position:absolute;inset:0;width:100%;height:100%}
+  #labels{pointer-events:none}
+  .maplabel{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;pointer-events:none;
+    font-family:'Cormorant Garamond',serif;color:#A8BCC7;letter-spacing:.35em;text-transform:uppercase}
+  .maplabel.water{font-style:italic;letter-spacing:.45em;color:#7FA0B0}
+  .maplabel.city{font-family:'IBM Plex Mono',monospace;text-transform:none;letter-spacing:.06em;color:#D8CBAE;font-size:11px}
+  .maplabel.city::before{content:"◦ ";color:var(--gold)}
+  .maplabel.site{font-family:'IBM Plex Mono',monospace;text-transform:none;letter-spacing:.08em;color:var(--gold);font-size:11px}
+  .maplabel.site::before{content:"◆ ";font-size:8px}
+  .maplabel.depth{font-family:'IBM Plex Mono',monospace;font-style:italic;letter-spacing:.22em;color:#6F93A6}
+  #vignette{position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(115% 100% at 50% 45%, transparent 55%, rgba(4,14,22,.55) 100%)}
+  #grain{position:absolute;inset:0;pointer-events:none;opacity:.04}
+  #loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:50;
+    font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.3em;text-transform:uppercase;
+    color:var(--ink-dim);transition:opacity .5s;pointer-events:none}
+  /* HUD */
+  #hud{position:fixed;top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;
+    padding:18px 26px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.14em;
+    color:var(--ink-dim);z-index:30;pointer-events:none;text-transform:uppercase}
+  #progressbar{position:fixed;top:0;left:0;height:2px;background:linear-gradient(90deg,var(--gold),var(--coral));
+    width:0%;z-index:40}
+  #coords{position:fixed;left:26px;bottom:22px;font-family:'IBM Plex Mono',monospace;font-size:11px;
+    letter-spacing:.12em;color:var(--ink-dim);z-index:30;pointer-events:none}
+  #compass{position:fixed;right:26px;bottom:22px;z-index:30;opacity:.75;pointer-events:none}
+  /* Title */
+  #title{position:fixed;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;
+    text-align:center;z-index:20;pointer-events:none;padding:0 24px;opacity:1;transition:opacity .6s;
+    background:radial-gradient(closest-side at 50% 50%, rgba(7,24,38,.92) 0%, rgba(7,24,38,.78) 52%, rgba(7,24,38,.35) 76%, transparent 100%)}
+  #title h1, #title .sub{text-shadow:0 2px 24px rgba(4,14,22,.9)}
+  #title .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.32em;color:var(--gold);
+    text-transform:uppercase;margin-bottom:22px}
+  #title h1{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:clamp(44px,7.5vw,104px);
+    line-height:1.02;max-width:14ch;text-wrap:balance;color:var(--ink)}
+  #title h1 em{font-style:italic;color:var(--gold)}
+  #title .sub{margin-top:26px;font-size:clamp(15px,1.4vw,19px);color:var(--ink-dim);max-width:52ch;line-height:1.6}
+  #title .hint{margin-top:54px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.28em;
+    color:var(--ink-dim);text-transform:uppercase;animation:bob 2.4s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(9px)}}
+  /* Chapter cards */
+  .card{position:fixed;z-index:20;width:min(380px,calc(100vw - 32px));pointer-events:none;opacity:0;visibility:hidden;
+    background:linear-gradient(160deg,var(--paper),#E9DEC6);color:var(--paper-ink);
+    padding:28px 30px 24px;border:1px solid rgba(120,95,50,.35);
+    box-shadow:0 30px 60px -20px rgba(0,0,0,.6), inset 0 0 0 5px rgba(255,255,255,.35), inset 0 0 0 6px rgba(150,120,70,.25)}
+  .card .kicker{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.3em;text-transform:uppercase;
+    color:#9A6B2F;margin-bottom:14px}
+  .card h2{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:30px;line-height:1.1;margin-bottom:14px}
+  .card p{font-size:15px;line-height:1.65;color:#3A4750}
+  .card .chips{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}
+  .card .chip{border-top:2px solid var(--gold);padding-top:8px}
+  .card .chip b{display:block;font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;color:#1E2B34}
+  .card .chip span{font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:#7A6644}
+  .card .note{margin-top:18px;font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:.12em;color:#9C8A66;text-transform:uppercase}
+  .card.left{left:4vw;top:50%;transform:translateY(-50%)}
+  .card.right{right:4vw;top:50%;transform:translateY(-50%)}
+  .card.center{left:50%;top:50%;transform:translate(-50%,-50%);width:min(560px,calc(100vw - 32px))}
+  .card .who{display:flex;gap:20px;align-items:flex-start}
+  .card .who image-slot{pointer-events:auto;flex:none}
+  .card .name{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.18em;color:#9A6B2F;
+    text-transform:uppercase;margin-bottom:8px}
+  @media (max-width:720px){
+    .card.left,.card.right,.card.center{left:50%;right:auto;top:auto;bottom:18px;transform:translateX(-50%)}
+    .card{padding:24px 24px 20px} .card h2{font-size:24px} .card p{font-size:14px}
+    #hud{padding:14px 16px;font-size:9px} #coords{left:16px;bottom:14px;font-size:9px}
+    #compass{right:14px;bottom:12px;transform:scale(.7);transform-origin:bottom right}
+  }
+</style>
+</head>
+<body>
+<div id="space"></div>
+<div id="stage">
+  <svg id="map"></svg>
+  <canvas id="flow"></canvas>
+  <div id="labels"></div>
+  <div id="vignette"></div>
+  <svg id="grain"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2"/></filter><rect width="100%" height="100%" filter="url(#n)"/></svg>
+</div>
+
+<div id="progressbar"></div>
+<div id="hud">
+  <div>Proyecto doctoral · Conectividad marina</div>
+  <div>Carta № 04 · Golfo de México</div>
+</div>
+<div id="coords">23°08′ N · 82°21′ O</div>
+<svg id="compass" width="86" height="86" viewBox="0 0 86 86">
+  <circle cx="43" cy="43" r="40" fill="none" stroke="#A8BCC7" stroke-width="1" opacity=".5"/>
+  <circle cx="43" cy="43" r="31" fill="none" stroke="#A8BCC7" stroke-width=".6" opacity=".35"/>
+  <g id="needle" style="transform-origin:43px 43px;transition:transform .15s ease-out">
+    <polygon points="43,8 47,43 43,50 39,43" fill="#E4A84D"/>
+    <polygon points="43,78 47,43 43,36 39,43" fill="#A8BCC7" opacity=".6"/>
+  </g>
+  <text x="43" y="6" text-anchor="middle" fill="#E4A84D" font-size="9" font-family="IBM Plex Mono, monospace">N</text>
+  <text x="43" y="85" text-anchor="middle" fill="#A8BCC7" font-size="8" font-family="IBM Plex Mono, monospace" opacity=".7">S</text>
+  <text x="81" y="46" text-anchor="middle" fill="#A8BCC7" font-size="8" font-family="IBM Plex Mono, monospace" opacity=".7">E</text>
+  <text x="5" y="46" text-anchor="middle" fill="#A8BCC7" font-size="8" font-family="IBM Plex Mono, monospace" opacity=".7">O</text>
+</svg>
+
+<div id="loading">Trazando la carta náutica…</div>
+<div id="title">
+  <div class="eyebrow">Expedición · Cuba → Florida → México</div>
+  <h1>La ruta de la <em>corriente</em></h1>
+  <div class="sub">Cómo los peces de los arrecifes cubanos viajan a la deriva por la Corriente de Florida
+    hasta las costas del sur de la Florida, y por el giro del Golfo hasta el litoral mexicano.
+    Un estudio doctoral sobre conectividad marina.</div>
+  <div class="hint">Desplázate para comenzar el viaje ↓</div>
+</div>
+
+<div class="card left" id="ch1">
+  <div class="kicker">Capítulo I · El desove</div>
+  <h2>Todo comienza en Cuba</h2>
+  <p>En los arrecifes del noroeste cubano, durante las lunas llenas de verano, pargos y meros se congregan
+     por miles en agregaciones de desove: un ritual sincronizado con la luna y la marea. Millones de larvas
+     quedan suspendidas en el agua, a merced de la corriente que pasa frente a la isla.</p>
+  <div class="chips">
+    <div class="chip"><b>12</b><span>especies estudiadas</span></div>
+    <div class="chip"><b>3</b><span>sitios de desove</span></div>
+  </div>
+</div>
+
+<div class="card right" id="ch2">
+  <div class="kicker">Capítulo II · La corriente</div>
+  <h2>Un río dentro del mar</h2>
+  <p>La Corriente de Florida transporta más agua que todos los ríos del planeta juntos. Las larvas
+     entran en este flujo cálido y veloz que cruza el estrecho entre Cuba y los Cayos de Florida.</p>
+  <div class="chips">
+    <div class="chip"><b>2 m/s</b><span>velocidad máxima</span></div>
+    <div class="chip"><b>26–29 °C</b><span>temperatura del agua</span></div>
+  </div>
+</div>
+
+<div class="card left" id="ch3">
+  <div class="kicker">Capítulo III · La travesía</div>
+  <h2>A la deriva, 500 km</h2>
+  <p>Durante dos a cuatro semanas las larvas viajan sin nadar apenas: la corriente hace el trabajo.
+     Los modelos de deriva del estudio siguen su trayectoria desde La Habana, a través del estrecho,
+     hasta los arrecifes del sur de la Florida.</p>
+  <div class="chips">
+    <div class="chip"><b>~500 km</b><span>distancia recorrida</span></div>
+    <div class="chip"><b>14–28</b><span>días de deriva larval</span></div>
+  </div>
+</div>
+
+<div class="card right" id="chm">
+  <div class="kicker">Capítulo IV · La criba</div>
+  <h2>Uno entre diez mil</h2>
+  <p>La corriente es autopista y lotería a la vez. Depredadores, hambre y remolinos que expulsan a las
+     larvas fuera de la plataforma diezman cada cohorte: de cada desove masivo, solo una fracción ínfima
+     vive lo suficiente para asentarse en un arrecife.</p>
+  <div class="chips">
+    <div class="chip"><b>&lt;0,01 %</b><span>supervivencia estimada</span></div>
+    <div class="chip"><b>21</b><span>días de edad media al asentarse</span></div>
+  </div>
+</div>
+
+<div class="card left" id="ch4">
+  <div class="kicker">Capítulo V · La llegada</div>
+  <h2>Costas de la Florida</h2>
+  <p>Las larvas que sobreviven se asientan en los arrecifes de los Cayos y del sureste de la Florida.
+     El análisis genético del doctorado confirma que estas poblaciones descienden, en parte, de los desoves cubanos:
+     dos orillas, un mismo mar.</p>
+  <div class="chips">
+    <div class="chip"><b>68 %</b><span>afinidad genética CU–EE.UU.</span></div>
+    <div class="chip"><b>5</b><span>zonas de asentamiento</span></div>
+  </div>
+  <div class="note">Prototipo visual · datos ilustrativos</div>
+</div>
+
+<div class="card right" id="chr">
+  <div class="kicker">Capítulo VI · El retorno</div>
+  <h2>Un viaje de ida y vuelta</h2>
+  <p>La conectividad no es una calle de sentido único. Remolinos ciclónicos y contracorrientes del estrecho
+     devuelven parte de las larvas hacia el suroeste: los desoves de la Florida también siembran, a su vez,
+     los arrecifes cubanos. Dos orillas que se repueblan mutuamente.</p>
+  <div class="chips">
+    <div class="chip"><b>2</b><span>direcciones de deriva</span></div>
+    <div class="chip"><b>~15 %</b><span>trayectorias de retorno</span></div>
+  </div>
+</div>
+
+<div class="card left" id="chl">
+  <div class="kicker">Capítulo VII · La Corriente de Lazo</div>
+  <h2>Tormentas bajo el mar</h2>
+  <p>El agua que entra por el Canal de Yucatán se pliega dentro del golfo formando un lazo. De él se
+     desprenden remolinos anticiclónicos gigantes —hasta 300 km de diámetro y 800 m de profundidad—
+     que derivan hacia el oeste durante meses, llevando agua cálida y larvas consigo.</p>
+  <div class="chips">
+    <div class="chip"><b>300 km</b><span>diámetro máximo</span></div>
+    <div class="chip"><b>6–11</b><span>meses entre desprendimientos</span></div>
+  </div>
+</div>
+
+<div class="card right" id="ch5">
+  <div class="kicker">Capítulo VIII · La ruta mexicana</div>
+  <h2>La otra ruta: México</h2>
+  <p>No toda el agua cruza al Atlántico. Parte del flujo que entra por el Canal de Yucatán gira al oeste
+     con la Corriente de Lazo y recorre el litoral mexicano, de Tamaulipas a la Bahía de Campeche,
+     sembrando larvas en los arrecifes del camino.</p>
+  <div class="chips">
+    <div class="chip"><b>~1 400 km</b><span>ruta occidental</span></div>
+    <div class="chip"><b>3</b><span>países, un mismo mar</span></div>
+  </div>
+</div>
+
+<div class="card left" id="chp">
+  <div class="kicker">Capítulo IX · El refugio</div>
+  <h2>Jardines de la Reina</h2>
+  <p>Al sur de Cuba, un laberinto de más de 600 cayos guarda el arrecife mejor conservado del Caribe,
+     protegido desde 1996. Sus poblaciones intactas de pargos, meros y tiburones exportan larvas a los
+     arrecifes vecinos: un área protegida siembra el mar mucho más allá de sus límites.</p>
+  <div class="chips">
+    <div class="chip"><b>600+</b><span>cayos e islotes</span></div>
+    <div class="chip"><b>1996</b><span>año de protección</span></div>
+  </div>
+</div>
+
+<div class="card right" id="chc">
+  <div class="kicker">Capítulo X · Un equilibrio frágil</div>
+  <h2>Si la corriente se frena</h2>
+  <p>El sistema oceánico que impulsa estas corrientes —el AMOC— podría debilitarse un 20–25 % hacia 2100.
+     Rutas más lentas significan derivas más largas, más mortalidad larval y menos intercambio entre
+     arrecifes: la red que une a tres países depende de un motor que se está desacelerando.</p>
+  <div class="chips">
+    <div class="chip"><b>−20–25 %</b><span>proyección AMOC · 2100</span></div>
+    <div class="chip"><b>3</b><span>países afectados</span></div>
+  </div>
+</div>
+
+<div class="card left" id="chmet">
+  <div class="kicker">Capítulo XI · El método</div>
+  <h2>Cómo se sigue a una larva</h2>
+  <p>Nadie puede marcar a una larva de 5 mm. El estudio combina tres líneas de evidencia: modelos de
+     deriva lagrangianos alimentados por corrientes simuladas de alta resolución, muestreo de larvas en
+     el mar y genética de poblaciones que rastrea el parentesco entre orillas.</p>
+  <div class="chips">
+    <div class="chip"><b>1/25°</b><span>resolución del modelo</span></div>
+    <div class="chip"><b>3</b><span>líneas de evidencia</span></div>
+  </div>
+</div>
+
+<div class="card center" id="ch6">
+  <div class="kicker">La investigación · Quién está detrás</div>
+  <div class="who">
+    <image-slot id="retrato" shape="circle" style="width:104px;height:104px" placeholder="Foto"></image-slot>
+    <div>
+      <div class="name">[ Nombre de la doctoranda ]</div>
+      <h2>Detrás del estudio</h2>
+      <p>Doctoranda en biología marina, formada en La Habana. Su trabajo —pionero en combinar modelos
+         de deriva oceánica, muestreo larval y genética de poblaciones— aporta la evidencia más sólida
+         hasta la fecha de que los arrecifes de Cuba, la Florida y México funcionan como una sola red
+         unida por las corrientes. Sus resultados ya informan estrategias de conservación a ambos
+         lados del estrecho.</p>
+    </div>
+  </div>
+  <div class="chips">
+    <div class="chip"><b>4</b><span>años de campañas</span></div>
+    <div class="chip"><b>2 140</b><span>larvas analizadas</span></div>
+  </div>
+  <div class="note">Prototipo visual · datos ilustrativos · arrastra una foto al círculo</div>
+</div>
+
+<script>
+const stage = document.getElementById('stage');
+const svg = d3.select('#map');
+const canvas = document.getElementById('flow');
+const ctx = canvas.getContext('2d');
+const labelsEl = document.getElementById('labels');
+let W = innerWidth, H = innerHeight, projection, land;
+
+// ---- camera keyframes: [progress, lon, lat, zoom]
+const KEYS = [
+  [0.00, -83.5, 25.0, 1.00],
+  [0.05, -83.5, 25.0, 1.05],
+  [0.09, -81.6, 22.7, 3.60],
+  [0.14, -81.4, 23.0, 3.45],
+  [0.19, -81.0, 23.6, 3.30],
+  [0.27, -80.5, 24.6, 3.30],
+  [0.35, -81.4, 24.8, 3.70],
+  [0.43, -80.35, 26.3, 3.90],
+  [0.47, -80.45, 26.5, 3.90],
+  [0.52, -82.6, 24.2, 2.70],
+  [0.56, -83.4, 23.5, 2.90],
+  [0.60, -88.2, 25.2, 2.05],
+  [0.64, -90.0, 25.0, 2.10],
+  [0.69, -95.2, 22.3, 3.00],
+  [0.73, -93.8, 20.6, 2.80],
+  [0.79, -79.3, 20.85, 3.40],
+  [0.83, -79.8, 21.0, 3.30],
+  [0.88, -86.5, 24.0, 1.45],
+  [0.94, -85.5, 25.0, 1.20],
+  [1.00, -86.5, 24.8, 1.15],
+];
+const smooth = t => t*t*(3-2*t);
+function camAt(p){
+  if(p<=KEYS[0][0]) return KEYS[0].slice(1);
+  for(let i=0;i<KEYS.length-1;i++){
+    const a=KEYS[i], b=KEYS[i+1];
+    if(p<=b[0]){
+      const t=smooth((p-a[0])/(b[0]-a[0]));
+      return [a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t,
+              Math.exp(Math.log(a[3])+(Math.log(b[3])-Math.log(a[3]))*t)];
+    }
+  }
+  return KEYS[KEYS.length-1].slice(1);
+}
+
+// ---- gulf stream waypoints (lon,lat)
+const STREAM_LL = [
+  [-85.6,21.9],[-84.7,22.7],[-83.4,23.35],[-82.2,23.6],[-81.0,23.85],[-80.3,24.35],
+  [-79.95,25.0],[-79.85,25.8],[-80.0,26.5],[-80.1,26.9]
+];
+const STREAM2_LL = [
+  [-84.3,24.2],[-86.0,25.6],[-88.0,26.4],[-90.5,26.6],[-93.0,26.0],[-95.0,24.8],
+  [-96.3,23.0],[-96.5,21.2],[-95.6,19.8],[-93.8,19.2],[-92.2,19.6]
+];
+const STREAM3_LL = [
+  [-80.25,25.35],[-81.3,24.55],[-82.6,24.05],[-84.0,23.95],[-84.9,23.2],[-84.3,22.45],[-83.2,22.15],[-82.5,22.6]
+];
+const ISOBATHS = [
+  [[-95.5,25.5],[-94,27],[-90,27.5],[-87,27],[-85.5,25.5],[-85,24],[-86.5,22.8],[-90,22.5],[-93.5,22.8],[-95.5,24]],
+  [[-93.5,25],[-91,26],[-88.5,25.5],[-87,24.5],[-88,23.5],[-91,23.3],[-93,23.8]],
+  [[-85.5,19.5],[-83,19.2],[-80.5,18.8],[-78.5,18.5],[-78.5,17.9],[-81,18.2],[-84,18.6],[-85.5,19.0]]
+];
+const EDDIES = [{ll:[-87.6,25.9],r:1.55,sp:1.0},{ll:[-91.2,24.7],r:1.9,sp:0.8},{ll:[-94.2,23.2],r:1.25,sp:1.2}].map(E=>(
+  {...E, parts:Array.from({length:46},()=>({a:Math.random()*6.283,rr:0.4+Math.random()*0.58,w:0.25+Math.random()*0.5}))}
+));
+let S1=null, S2=null, S3=null;
+
+const LABELS = [
+  {n:'GOLFO DE MÉXICO', ll:[-90.5,25.0], c:'water', s:16, k:[0,2.2]},
+  {n:'MAR CARIBE', ll:[-78.5,17.5], c:'water', s:15, k:[0,2.4]},
+  {n:'OCÉANO ATLÁNTICO', ll:[-72.5,29.5], c:'water', s:15, k:[0,99]},
+  {n:'CUBA', ll:[-78.9,21.7], c:'land', s:15, k:[0,99]},
+  {n:'FLORIDA', ll:[-81.7,28.1], c:'land', s:12, k:[1.6,99]},
+  {n:'ESTADOS UNIDOS', ll:[-83.5,32.9], c:'land', s:13, k:[0,99]},
+  {n:'YUCATÁN', ll:[-89.0,20.1], c:'land', s:11, k:[0,3]},
+  {n:'MÉXICO', ll:[-100.0,24.5], c:'land', s:13, k:[0,99]},
+  {n:'B. DE CAMPECHE', ll:[-94.3,20.8], c:'water', s:12, k:[1.8,99]},
+  {n:'Veracruz', ll:[-96.13,19.17], c:'city', s:11, k:[2.2,99]},
+  {n:'Tampico', ll:[-97.86,22.25], c:'city', s:11, k:[2.4,99]},
+  {n:'La Habana', ll:[-82.36,23.11], c:'city', s:11, k:[2.4,99]},
+  {n:'Miami', ll:[-80.19,25.76], c:'city', s:11, k:[2.0,99]},
+  {n:'Palm Beach', ll:[-80.04,26.71], c:'city', s:11, k:[2.6,99]},
+  {n:'C. Cañaveral', ll:[-80.6,28.4], c:'city', s:11, k:[2.2,99]},
+  {n:'Cayo Hueso', ll:[-81.78,24.55], c:'city', s:11, k:[2.6,99]},
+  {n:'Cancún', ll:[-86.85,21.16], c:'city', s:11, k:[2.2,99]},
+  {n:'Mérida', ll:[-89.62,20.97], c:'city', s:11, k:[2.6,99]},
+  {n:'Cd. del Carmen', ll:[-91.83,18.65], c:'city', s:11, k:[2.4,99]},
+  {n:'Matanzas', ll:[-81.58,23.05], c:'city', s:11, k:[3.2,99]},
+  {n:'Jardines de la Reina', ll:[-79.1,20.55], c:'site', s:11, k:[2.0,99]},
+  {n:'Guanahacabibes', ll:[-84.3,21.75], c:'site', s:11, k:[2.4,99]},
+  {n:'Dry Tortugas', ll:[-82.87,24.63], c:'site', s:11, k:[2.6,99]},
+  {n:'CANAL DE YUCATÁN', ll:[-85.8,21.6], c:'water', s:11, k:[1.8,99]},
+  {n:'CUENCA DEL GOLFO · −3 700 m', ll:[-90.6,24.2], c:'depth', s:10, k:[1.4,3.4]},
+  {n:'FOSA DE CAIMÁN · −7 000 m', ll:[-81.5,18.9], c:'depth', s:10, k:[1.4,3.4]},
+];
+let labelNodes = [];
+
+function fitProjection(){
+  W = innerWidth; H = innerHeight;
+  const box = {type:'MultiPoint', coordinates:[[-97,15],[-64,15],[-64,37],[-97,37]]};
+  projection = d3.geoMercator().fitExtent([[W*0.04,H*0.06],[W*0.96,H*0.94]], box);
+  canvas.width = W * devicePixelRatio; canvas.height = H * devicePixelRatio;
+  canvas.style.width = W+'px'; canvas.style.height = H+'px';
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+  S1=buildStream(STREAM_LL); S2=buildStream(STREAM2_LL); S3=buildStream(STREAM3_LL);
+  if(land) drawWorld();
+}
+function buildStream(LL){
+  const raw = LL.map(d=>projection(d));
+  const dense = [];
+  for(let i=0;i<raw.length-1;i++){
+    const p0=raw[Math.max(0,i-1)],p1=raw[i],p2=raw[i+1],p3=raw[Math.min(raw.length-1,i+2)];
+    for(let j=0;j<28;j++){
+      const t=j/28,t2=t*t,t3=t2*t;
+      dense.push([
+        .5*(2*p1[0]+(-p0[0]+p2[0])*t+(2*p0[0]-5*p1[0]+4*p2[0]-p3[0])*t2+(-p0[0]+3*p1[0]-3*p2[0]+p3[0])*t3),
+        .5*(2*p1[1]+(-p0[1]+p2[1])*t+(2*p0[1]-5*p1[1]+4*p2[1]-p3[1])*t2+(-p0[1]+3*p1[1]-3*p2[1]+p3[1])*t3)
+      ]);
+    }
+  }
+  dense.push(raw[raw.length-1]);
+  const cum=[0];
+  for(let i=1;i<dense.length;i++) cum.push(cum[i-1]+Math.hypot(dense[i][0]-dense[i-1][0],dense[i][1]-dense[i-1][1]));
+  const total=cum[cum.length-1], N=420, pts=[], ns=[];
+  let j=0;
+  for(let i=0;i<N;i++){
+    const s=total*i/(N-1);
+    while(j<cum.length-2 && cum[j+1]<s) j++;
+    const t=(s-cum[j])/((cum[j+1]-cum[j])||1);
+    pts.push([dense[j][0]+(dense[j+1][0]-dense[j][0])*t, dense[j][1]+(dense[j+1][1]-dense[j][1])*t]);
+  }
+  for(let i=0;i<N;i++){
+    const a=pts[Math.max(0,i-1)], b=pts[Math.min(N-1,i+1)];
+    const dx=b[0]-a[0], dy=b[1]-a[1], l=Math.hypot(dx,dy)||1;
+    ns.push([-dy/l,dx/l,dx/l,dy/l]); // normal + tangent
+  }
+  return {pts,ns};
+}
+function pathAt(S, u, off){
+  u = Math.min(0.9999, Math.max(0, u));
+  const f = u*(S.pts.length-1), i=Math.floor(f), t=f-i;
+  const p=S.pts[i], q=S.pts[i+1]||p, n=S.ns[i];
+  return [p[0]+(q[0]-p[0])*t + n[0]*off, p[1]+(q[1]-p[1])*t + n[1]*off, Math.atan2(n[3],n[2])];
+}
+
+let landPath2D=null, gratPath2D=null, isoPaths=[];
+function drawWorld(){
+  const path = d3.geoPath(projection);
+  landPath2D = new Path2D(path(land));
+  gratPath2D = new Path2D(path(d3.geoGraticule().step([5,5])()));
+  isoPaths = ISOBATHS.map(loop=>{
+    const pts=loop.map(d=>projection(d)), n=pts.length, p=new Path2D();
+    const mid=(a,b)=>[(a[0]+b[0])/2,(a[1]+b[1])/2];
+    let m=mid(pts[n-1],pts[0]); p.moveTo(m[0],m[1]);
+    for(let i=0;i<n;i++){const m2=mid(pts[i],pts[(i+1)%n]);p.quadraticCurveTo(pts[i][0],pts[i][1],m2[0],m2[1]);}
+    p.closePath(); return p;
+  });
+  // labels
+  labelsEl.innerHTML=''; labelNodes=[];
+  LABELS.forEach(L=>{
+    const el=document.createElement('div');
+    el.className='maplabel '+L.c; el.textContent=L.n;
+    labelsEl.appendChild(el);
+    labelNodes.push({el, xy:projection(L.ll), s:L.s, k:L.k});
+  });
+}
+
+// ---- particles & fish
+const mkParts=n=>Array.from({length:n},()=>({
+  u:Math.random(), off:(Math.random()*2-1), sp:0.00035+Math.random()*0.00075, tr:0.006+Math.random()*0.014
+}));
+const PARTS = mkParts(380), PARTS2 = mkParts(300), PARTS3 = mkParts(220);
+const mkFish=(n,cols)=>Array.from({length:n},(_,i)=>({
+  du:-0.06 + i*(0.24/n) + Math.random()*0.02, off:(Math.random()*2-1)*0.55, ph:Math.random()*6.28,
+  size:0.8+Math.random()*0.5, col: cols[i%cols.length]
+}));
+const FISH = mkFish(7,['#E4A84D','#E4A84D','#E2725B']);
+const FISH2 = mkFish(5,['#E2725B','#E4A84D']);
+const FISH3 = mkFish(5,['#5FC2C0','#E4A84D']);
+function bandHalf(u){ return 6 + 10*Math.sin(Math.PI*Math.min(1,u*1.1)); } // map-unit half width
+
+function drawFish(x,y,ang,len,wig,col,alpha){
+  ctx.save();ctx.translate(x,y);ctx.rotate(ang);ctx.globalAlpha=alpha;
+  const l=len,h=len*0.36;
+  ctx.beginPath();ctx.moveTo(l*.5,0);
+  ctx.quadraticCurveTo(l*.08,-h,-l*.32,-h*.3);ctx.quadraticCurveTo(-l*.48,0,-l*.32,h*.3);
+  ctx.quadraticCurveTo(l*.08,h,l*.5,0);
+  ctx.fillStyle=col;ctx.fill();
+  ctx.strokeStyle='rgba(11,35,52,.5)';ctx.lineWidth=Math.max(.6,l*.03);ctx.stroke();
+  ctx.save();ctx.translate(-l*.32,0);ctx.rotate(wig);
+  ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-l*.3,-h*.55);ctx.lineTo(-l*.22,0);ctx.lineTo(-l*.3,h*.55);
+  ctx.closePath();ctx.fillStyle=col;ctx.fill();ctx.restore();
+  ctx.beginPath();ctx.arc(l*.28,-h*.14,Math.max(1,l*.045),0,7);ctx.fillStyle='#0B2334';ctx.fill();
+  ctx.restore();ctx.globalAlpha=1;
+}
+
+// ---- fades
+const fade=(p,a,b,m=0.035)=>Math.max(0,Math.min(1,Math.min(a<=0?1:(p-a)/m, b>=1?1:(b-p)/m, 1)));
+const ramp=(p,a,b)=>Math.max(0,Math.min(1,(p-a)/(b-a)));
+const CARDS=[
+  ['title',0.00,0.05],['ch1',0.075,0.135],['ch2',0.16,0.22],['ch3',0.245,0.30],
+  ['chm',0.325,0.38],['ch4',0.405,0.46],['chr',0.485,0.545],['chl',0.575,0.635],
+  ['ch5',0.66,0.715],['chp',0.765,0.82],['chc',0.85,0.90],['chmet',0.925,0.96],
+  ['ch6',0.98,1.01]
+];
+
+let cam={lon:-83.5,lat:25.0,k:1}, prog=0, tPrev=0;
+function frame(t){
+  requestAnimationFrame(frame);
+  const dt=Math.min(50,t-tPrev); tPrev=t;
+  const max=document.body.scrollHeight-innerHeight;
+  prog = window.__prog ?? (max>0 ? Math.min(1, scrollY/max) : 0);
+  document.getElementById('progressbar').style.width=(prog*100)+'%';
+  const [lon,lat,k]=camAt(prog);
+  const e=1-Math.pow(0.0018,dt/1000);
+  cam.lon+=(lon-cam.lon)*e; cam.lat+=(lat-cam.lat)*e;
+  cam.k=Math.exp(Math.log(cam.k)+(Math.log(k)-Math.log(cam.k))*e);
+  if(Math.abs(cam.lon-lon)<0.002&&Math.abs(cam.lat-lat)<0.002&&Math.abs(cam.k-k)<0.002){cam.lon=lon;cam.lat=lat;cam.k=k;}
+  const camKey=cam.lon.toFixed(4)+','+cam.lat.toFixed(4)+','+cam.k.toFixed(4)+','+prog.toFixed(4);
+  const flowOn=ramp(prog,0.17,0.24)>0;
+  if(camKey===window._camKey && !flowOn){return;}  // idle: nothing animating
+  window._camKey=camKey;
+  if(!projection) return;
+  const c=projection([cam.lon,cam.lat]);
+  const K=cam.k, tx=W/2-c[0]*K, ty=H/2-c[1]*K;
+  const scr=p=>[p[0]*K+tx, p[1]*K+ty];
+  // ---- map on canvas
+  ctx.clearRect(0,0,W,H);
+  if(landPath2D){
+    ctx.save();ctx.translate(tx,ty);ctx.scale(K,K);
+    ctx.lineJoin='round';
+    ctx.strokeStyle='#C9DCE5';ctx.globalAlpha=.12;ctx.lineWidth=.5/K;ctx.stroke(gratPath2D);
+    ctx.setLineDash([6/K,5/K]);
+    ctx.strokeStyle='#7FA0B0';ctx.globalAlpha=.26;ctx.lineWidth=.9/K;
+    isoPaths.forEach(p=>ctx.stroke(p));
+    ctx.setLineDash([]);
+    ctx.strokeStyle='#6FA3BC';
+    for(const [w,o] of [[11,.07],[5.5,.12],[2.4,.2]]){ctx.globalAlpha=o;ctx.lineWidth=w/K;ctx.stroke(landPath2D);}
+    ctx.globalAlpha=1;ctx.fillStyle='#EDE3CC';ctx.fill(landPath2D);
+    ctx.strokeStyle='#B99C6B';ctx.lineWidth=1/K;ctx.stroke(landPath2D);
+    ctx.restore();
+  }
+  // labels
+  labelNodes.forEach(L=>{
+    const [x,y]=scr(L.xy);
+    const vis=(K>=L.k[0]&&K<=L.k[1]&&x>-100&&x<W+100&&y>-40&&y<H+40)?1:0;
+    const dim=0.06+0.94*ramp(prog,0.05,0.14);
+    L.el.style.opacity=vis*0.9*dim;
+    L.el.style.fontSize=L.s*(0.85+0.3*Math.min(K,3)/3)+'px';
+    L.el.style.left=x+'px'; L.el.style.top=y+'px';
+  });
+  // coords readout
+  document.getElementById('coords').textContent=
+    `${Math.abs(cam.lat).toFixed(0)}°${String(Math.round(Math.abs(cam.lat)%1*60)).padStart(2,'0')}′ N · `+
+    `${Math.abs(cam.lon).toFixed(0)}°${String(Math.round(Math.abs(cam.lon)%1*60)).padStart(2,'0')}′ O · ×${K.toFixed(1)}`;
+  const flow1A=ramp(prog,0.17,0.24),
+        flow3A=ramp(prog,0.47,0.52)*fade(prog,0.46,0.60,0.05),
+        flow2A=ramp(prog,0.63,0.70),
+        eddyA=fade(prog,0.56,0.92,0.05);
+  ctx.lineCap='round';
+  if(S1 && flow1A>0){
+    const travel=ramp(prog,0.20,0.44);
+    const fishA=flow1A*fade(prog,0.18,0.50,0.06);
+    drawLeg(S1,PARTS,FISH,flow1A,travel,fishA,'228,168,77',scr,K,dt,t);
+  }
+  if(S3 && flow3A>0){
+    const travel=ramp(prog,0.49,0.565);
+    drawLeg(S3,PARTS3,FISH3,flow3A,travel,flow3A,'95,194,192',scr,K,dt,t);
+  }
+  drawEddies(scr,K,t,eddyA);
+  if(S2 && flow2A>0){
+    const travel=ramp(prog,0.655,0.745);
+    const fishA=flow2A*fade(prog,0.63,0.80,0.06);
+    drawLeg(S2,PARTS2,FISH2,flow2A,travel,fishA,'95,194,192',scr,K,dt,t);
+  }
+  // cards
+  for(const [id,a,b] of CARDS){
+    const el=document.getElementById(id), o=fade(prog,a,b);
+    el.style.opacity=o;
+    el.style.visibility=o>0?'visible':'hidden';
+    if(id!=='title'){
+      const base=innerWidth<=720?'translateX(-50%)':(el.classList.contains('center')?'translate(-50%,-50%)':'translateY(-50%)');
+      el.style.transform=`${base} translateY(${(1-o)*26}px)`;
+    }
+  }
+}
+function drawLeg(S,parts,fishes,flowA,travel,fishA,rgb,scr,K,dt,t){
+  for(const P of parts){
+    P.u+=P.sp*dt*0.06; if(P.u>1)P.u-=1;
+    const half=bandHalf(P.u);
+    const a1=pathAt(S,P.u-P.tr,P.off*half), a2=pathAt(S,P.u,P.off*half);
+    const [x1,y1]=scr(a1), [x2,y2]=scr(a2);
+    if((x1<-50&&x2<-50)||(x1>W+50&&x2>W+50)||(y1<-50&&y2<-50)||(y1>H+50&&y2>H+50)) continue;
+    const edge=1-Math.abs(P.off);
+    ctx.strokeStyle=`rgba(${rgb},${(0.10+0.45*edge)*flowA})`;
+    ctx.lineWidth=Math.max(.7,Math.min(2.6,0.55*K))*(0.6+0.8*edge);
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  }
+  if(fishA<=0 || travel<=0.01) return;
+  for(const F of fishes){
+    const u=Math.min(0.985,Math.max(0.01,travel*0.97+F.du));
+    const half=bandHalf(u);
+    const sway=Math.sin(t/900+F.ph)*0.18;
+    const p=pathAt(S,u,(F.off+sway*0.3)*half*0.7);
+    const [x,y]=scr(p);
+    const len=Math.max(18,Math.min(58,14*K))*F.size;
+    drawFish(x,y,p[2]+sway*0.25,len,Math.sin(t/140+F.ph)*0.35,F.col,fishA);
+  }
+}
+function drawEddies(scr,K,t,alpha){
+  if(alpha<=0||!projection) return;
+  for(const E of EDDIES){
+    const c0=projection(E.ll), c=scr(c0);
+    const p2=projection([E.ll[0]+E.r,E.ll[1]]);
+    const R=Math.hypot(p2[0]-c0[0],p2[1]-c0[1])*K;
+    if(c[0]<-R||c[0]>W+R||c[1]<-R||c[1]>H+R) continue;
+    for(const P of E.parts){
+      const ang=P.a+t*0.00045*E.sp*(1.6-P.rr);
+      ctx.beginPath();ctx.arc(c[0],c[1],P.rr*R,ang,ang+0.30);
+      ctx.strokeStyle=`rgba(228,168,77,${Math.max(0,(0.06+0.26*(1-Math.abs(P.rr-0.72)*2.2)))*alpha})`;
+      ctx.lineWidth=Math.max(.6,.45*K)*P.w*2;
+      ctx.stroke();
+    }
+  }
+}
+fetch('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-50m.json')
+  .then(r=>r.json())
+  .then(topo=>{
+    const all = topojson.feature(topo, topo.objects.countries);
+    land = {type:'FeatureCollection', features: all.features.filter(f=>{
+      if(f.properties && /United States/.test(f.properties.name||'')) return true;
+      const b=d3.geoBounds(f);
+      return b[0][0]<-52 && b[1][0]>-102 && b[0][1]<47 && b[1][1]>6;
+    })};
+    fitProjection(); drawWorld();
+    const ld=document.getElementById('loading');
+    ld.style.opacity=0; setTimeout(()=>ld.remove(),600);
+    requestAnimationFrame(frame);
+  });
+addEventListener('resize',()=>{ if(land){ fitProjection(); } });
+// compass needle follows the cursor
+const needle=document.getElementById('needle');
+let needleAng=0, needleTarget=0;
+addEventListener('pointermove',e=>{
+  const r=document.getElementById('compass').getBoundingClientRect();
+  const cx=r.left+r.width/2, cy=r.top+r.height/2;
+  let a=Math.atan2(e.clientX-cx,-(e.clientY-cy))*180/Math.PI; // 0 = up, clockwise
+  let d=a-needleAng; d=((d+540)%360)-180; needleTarget=needleAng+d;
+  needleAng=needleTarget;
+  needle.style.transform=`rotate(${needleAng}deg)`;
+},{passive:true});
+</script>
+</body>
+</html>
