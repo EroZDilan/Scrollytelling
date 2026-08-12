@@ -8,7 +8,7 @@ html{scroll-behavior:auto}
 body{background:radial-gradient(120% 90% at 50% 40%, #10344C 0%, var(--sea) 45%, var(--sea-deep) 100%);
      color:var(--ink); font-family:'Source Serif 4', Georgia, serif; overflow-x:hidden}
 a{color:var(--gold);text-decoration:none} a:hover{color:var(--coral)}
-#space{height:2400vh}
+#space{height:5200vh}
 #stage{position:fixed;inset:0;overflow:hidden}
 #map,#flow,#labels{position:absolute;inset:0;width:100%;height:100%}
 #labels{pointer-events:none}

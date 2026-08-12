@@ -104,14 +104,14 @@ const LABELS: Label[] = [
   { n: 'FOSA DE CAIMÁN · −7 000 m', ll: [-81.5, 18.9], c: 'depth', s: 10, k: [1.4, 3.4] },
 ];
 
-const fade = (p: number, a: number, b: number, m = 0.035) =>
+const fade = (p: number, a: number, b: number, m = 0.012) =>
   Math.max(0, Math.min(1, Math.min(a <= 0 ? 1 : (p - a) / m, b >= 1 ? 1 : (b - p) / m, 1)));
 const ramp = (p: number, a: number, b: number) => Math.max(0, Math.min(1, (p - a) / (b - a)));
 
 const CARDS: [string, number, number, number?][] = [
-  ['title', 0.00, 0.05], ['ch1', 0.075, 0.135], ['ch2', 0.16, 0.22], ['ch3', 0.245, 0.30],
-  ['chm', 0.325, 0.38], ['ch4', 0.405, 0.46], ['chr', 0.485, 0.545], ['chl', 0.575, 0.635],
-  ['ch5', 0.66, 0.715], ['chp', 0.765, 0.82], ['chc', 0.85, 0.90], ['chmet', 0.925, 0.96],
+  ['title', 0.00, 0.05], ['ch1', 0.075, 0.14], ['ch2', 0.16, 0.225], ['ch3', 0.245, 0.305],
+  ['chm', 0.325, 0.385], ['ch4', 0.405, 0.465], ['chr', 0.485, 0.555], ['chl', 0.575, 0.64],
+  ['ch5', 0.66, 0.745], ['chp', 0.765, 0.83], ['chc', 0.85, 0.905], ['chmet', 0.925, 0.97],
   ['ch6', 0.98, 1.01, 0.02],
 ];
 
